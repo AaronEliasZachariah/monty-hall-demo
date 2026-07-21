@@ -154,6 +154,7 @@ var MH=(function(){
       actionsEl=document.getElementById('actions'), resultEl=document.getElementById('result');
   var N=3, car, pick, keeper, opened, phase, busy=false, els=[], finalEls=[];
   var scores={3:{st:{w:0,n:0},sw:{w:0,n:0}}, 100:{st:{w:0,n:0},sw:{w:0,n:0}}};
+  var firstRound={3:true, 100:true};   // first demo per mode: staying always loses
 
   function rnd(n){return Math.floor(Math.random()*n);}
   function otherThan(p){ var k; do{k=rnd(N);}while(k===p); return k; }
@@ -204,9 +205,13 @@ var MH=(function(){
   }
   function render(){ bindPick(); renderActions(); }
 
+  function repaintPrizes(){
+    for(var k=0;k<N;k++){ var p=els[k].querySelector('.prize'); if(p) p.textContent=(k===car?'🚗':'🐐'); }
+  }
   function onPick(i){
     if(phase!=='pick' || busy) return;
     pick=i;
+    if(firstRound[N]){ car=otherThan(pick); firstRound[N]=false; repaintPrizes(); } // demo: stay loses
     keeper = (car!==pick) ? car : otherThan(pick);
     opened=[]; for(var k=0;k<N;k++){ if(k!==pick && k!==keeper) opened.push(k); }
     els[pick].classList.add('picked');
@@ -323,7 +328,7 @@ var MH=(function(){
     updateScores();
     setStatus('Over '+slot.n+' rounds, '+(doSwitch?'switching':'staying')+' won '+pctTxt(slot)+' of the time.');
   }
-  function reset(){ scores={3:{st:{w:0,n:0},sw:{w:0,n:0}},100:{st:{w:0,n:0},sw:{w:0,n:0}}}; updateScores(); start(); }
+  function reset(){ scores={3:{st:{w:0,n:0},sw:{w:0,n:0}},100:{st:{w:0,n:0},sw:{w:0,n:0}}}; firstRound={3:true,100:true}; updateScores(); start(); }
 
   setMode(3);
   return { setMode:setMode, openGoats:openGoats, decide:decide, auto:auto, reset:reset };
