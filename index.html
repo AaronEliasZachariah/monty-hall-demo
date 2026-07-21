@@ -3,180 +3,322 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monty Hall — Should you switch?</title>
+<title>Monty Hall: should you switch?</title>
 <style>
   :root{ --cyan:#1FC8E4; --white:#fff; --body:#E2E0FE; --faint:#C6C1F3; --coral:#FF8A78; --gold:#ffd479; --ink:#0C0820; }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{
+  .mh{
     font-family:"Poppins","Segoe UI",system-ui,-apple-system,sans-serif; color:var(--white);
     background:linear-gradient(135deg,#5A4EE8 0%,#766CEF 45%,#9289F5 100%);
-    min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:min(6vh,50px) 20px 36px;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    gap:clamp(14px,2.2vh,22px); padding:clamp(20px,4vh,42px) 20px 34px;
   }
-  h1{font-weight:700;font-size:clamp(28px,5vw,50px);margin:0 0 4px;letter-spacing:.5px;text-align:center}
-  h1 .u{border-bottom:5px solid var(--cyan);padding-bottom:2px}
-  .sub{color:var(--faint);font-size:clamp(15px,2.4vw,20px);margin:0 0 30px;font-weight:500;min-height:1.4em;text-align:center;max-width:36ch}
+  .mh h1{font-weight:700;font-size:clamp(26px,4.4vw,46px);margin:0;letter-spacing:.3px;text-align:center}
+  .mh h1 .u{border-bottom:5px solid var(--cyan);padding-bottom:2px}
 
-  /* ---- realistic doors ---- */
-  .doors{display:flex;gap:clamp(24px,5vw,58px);flex-wrap:wrap;justify-content:center;perspective:1600px}
-  .frame{
-    width:clamp(118px,19vw,178px);height:clamp(214px,34vw,320px);position:relative;
-    border-radius:7px 7px 3px 3px;background:#120d1e;
-    border:10px solid #2b2016; border-bottom-width:13px;
-    box-shadow:0 20px 46px rgba(12,8,32,.5), inset 0 0 26px rgba(0,0,0,.75);
-    cursor:pointer; transition:transform .18s ease, border-color .25s, box-shadow .25s;
-  }
+  /* nav tabs */
+  .mh .nav{display:inline-flex;background:rgba(12,8,32,.28);border:1.5px solid rgba(255,255,255,.22);
+    border-radius:999px;padding:5px;gap:4px}
+  .mh .nav button{font-family:inherit;font-weight:700;font-size:clamp(13px,1.8vw,15.5px);
+    padding:9px 20px;border-radius:999px;border:0;background:transparent;color:var(--body);cursor:pointer;transition:.2s}
+  .mh .nav button.on{background:var(--cyan);color:var(--ink)}
+  .mh .nav button:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+
+  .mh .status{color:var(--white);font-size:clamp(15px,2.3vw,20px);font-weight:500;text-align:center;
+    min-height:2.7em;max-width:44ch;line-height:1.35;margin:0}
+  .mh .status b{color:var(--cyan)}
+
+  /* ---- stage ---- */
+  .mh .stage{display:flex;justify-content:center;align-items:flex-start}
+  .mh .stage.three{gap:clamp(20px,4.5vw,52px);perspective:1600px}
+  .mh .stage.hundred{display:grid;grid-template-columns:repeat(20,1fr);gap:clamp(4px,.7vw,7px);
+    max-width:860px;width:100%}
+
+  /* door base */
+  .frame{position:relative;background:#120d1e;cursor:pointer;
+    transition:transform .18s ease, border-color .25s, box-shadow .25s;}
   .frame.locked{cursor:default}
-  .frame:not(.locked):hover{transform:translateY(-7px)}
   .behind{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(130% 80% at 50% 26%, #37324f 0%, #171226 55%, #0c0820 100%);}
-  .behind::before{content:"";position:absolute;inset:0;background:
-    linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,0) 30%);}
-  .prize{font-size:clamp(54px,10vw,92px);line-height:1;filter:drop-shadow(0 8px 10px rgba(0,0,0,.55));transform:translateY(4px)}
-  .slab{
-    position:absolute;inset:0;border-radius:4px;transform-origin:left center;
-    transition:transform .7s cubic-bezier(.2,.75,.15,1);backface-visibility:hidden;
+  .prize{line-height:1;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+  .slab{position:absolute;inset:0;transform-origin:left center;backface-visibility:hidden;
     background:
       repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 2px, rgba(0,0,0,.05) 2px 5px),
       linear-gradient(90deg,#5a3a20 0%, #855835 10%, #7a4f2f 50%, #6d4526 90%, #4f331c 100%);
-    box-shadow:inset 0 0 0 2px rgba(0,0,0,.22), inset 0 2px 6px rgba(255,220,180,.12), 2px 3px 8px rgba(0,0,0,.4);
-    padding:15% 15% 12%;
-  }
-  .frame.open .slab{transform:rotateY(-116deg)}
-  .frame:not(.locked):hover .slab{filter:brightness(1.07)}
-  .stiles{position:absolute;inset:11% 14%;display:flex;flex-direction:column;gap:9%}
-  .panel{flex:1;border-radius:4px;background:linear-gradient(158deg,#6b4425,#583619);
-    box-shadow:inset 2px 3px 6px rgba(0,0,0,.5), inset -2px -2px 4px rgba(255,214,170,.12);}
-  .num{position:absolute;top:7%;left:0;right:0;text-align:center;font-size:clamp(20px,3.4vw,30px);
-    font-weight:700;color:#f4e7cf;text-shadow:0 1px 0 rgba(0,0,0,.55), 0 -1px 0 rgba(255,255,255,.12);}
-  .knob{position:absolute;right:11%;top:50%;transform:translateY(-50%);
-    width:clamp(13px,2.4vw,19px);height:clamp(13px,2.4vw,19px);border-radius:50%;
-    background:radial-gradient(circle at 34% 30%, #fff1c4, #cf9a34 58%, #8a5e18);
-    box-shadow:0 2px 3px rgba(0,0,0,.55), inset 0 0 2px rgba(255,255,255,.5);}
-  .hinge{position:absolute;left:-5px;width:8px;height:12%;background:linear-gradient(90deg,#4a3826,#2c2015);
-    border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);}
-  .hinge.h1{top:15%}.hinge.h2{bottom:15%}
-  .frame.picked{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(31,200,228,.55),0 20px 46px rgba(12,8,32,.5)}
-  .frame.win{border-color:var(--gold);box-shadow:0 0 0 4px rgba(255,212,121,.6),0 0 48px rgba(255,200,90,.55)}
-  .frame.lose{border-color:var(--coral)}
-  .tag{position:absolute;top:-27px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;
-    font-size:12px;font-weight:700;letter-spacing:2px;color:var(--cyan)}
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.2), inset 0 2px 6px rgba(255,220,180,.12), 2px 3px 8px rgba(0,0,0,.4);}
+  .num{position:absolute;left:0;right:0;text-align:center;font-weight:700;color:#f4e7cf;
+    text-shadow:0 1px 0 rgba(0,0,0,.55);}
+  .knob{position:absolute;border-radius:50%;background:radial-gradient(circle at 34% 30%, #fff1c4, #cf9a34 58%, #8a5e18);
+    box-shadow:0 1px 2px rgba(0,0,0,.5);}
+  .odds{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:3;
+    font-weight:700;color:var(--white);text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  .frame.showodds .odds{display:flex}
+  .frame.keepodds .odds{color:var(--gold)}
 
-  .actions{display:flex;gap:16px;margin-top:30px;flex-wrap:wrap;justify-content:center;min-height:52px}
-  button{font-family:inherit;font-weight:700;font-size:clamp(14px,2vw,17px);padding:13px 26px;border-radius:999px;
-    border:2px solid var(--cyan);background:var(--cyan);color:var(--ink);cursor:pointer;transition:transform .12s}
-  button.ghost{background:transparent;color:var(--white)}
-  button:hover{transform:translateY(-2px)}
-  button:focus-visible{outline:3px solid var(--white);outline-offset:3px}
-  .result{margin-top:14px;font-size:clamp(18px,3vw,26px);font-weight:700;min-height:1.5em;text-align:center}
-  .result .w{color:var(--cyan)} .result .l{color:var(--coral)}
-  .scores{display:flex;gap:clamp(16px,4vw,60px);margin-top:auto;padding-top:34px;flex-wrap:wrap;justify-content:center}
-  .card{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);border-radius:16px;padding:18px 30px;min-width:190px;text-align:center}
-  .card .k{font-size:13px;letter-spacing:2px;color:var(--faint);font-weight:700;text-transform:uppercase}
-  .card .pct{font-size:clamp(34px,6vw,52px);font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
-  .card.switch .pct{color:var(--cyan)} .card.stay .pct{color:var(--faint)}
-  .card .n{font-size:13px;color:var(--faint);font-variant-numeric:tabular-nums}
-  .auto{margin-top:26px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;color:var(--faint);font-size:14px}
-  .auto button{border-color:rgba(255,255,255,.4);background:transparent;color:var(--white);font-size:14px;padding:9px 18px}
-  .foot{margin-top:18px;color:var(--faint);font-size:13px;opacity:.85}
-  @media (prefers-reduced-motion: reduce){ .slab,.frame,button{transition:none} }
+  /* THREE-door: realistic swinging doors */
+  .three .frame{width:clamp(112px,18vw,168px);height:clamp(196px,31vw,290px);
+    border-radius:7px 7px 3px 3px;border:10px solid #2b2016;border-bottom-width:13px;
+    box-shadow:0 20px 44px rgba(12,8,32,.5), inset 0 0 24px rgba(0,0,0,.72);}
+  .three .prize{font-size:clamp(52px,9vw,86px);transform:translateY(4px)}
+  .three .slab{border-radius:4px;transition:transform .7s cubic-bezier(.2,.75,.15,1);padding:15% 15% 12%}
+  .three .frame.open .slab{transform:rotateY(-116deg)}
+  .three .frame:not(.locked):hover{transform:translateY(-7px)}
+  .three .frame:not(.locked):hover .slab{filter:brightness(1.07)}
+  .three .num{top:7%;font-size:clamp(19px,3.2vw,28px)}
+  .three .knob{right:11%;top:50%;transform:translateY(-50%);width:clamp(13px,2.3vw,18px);height:clamp(13px,2.3vw,18px)}
+  .three .stiles{position:absolute;inset:11% 14%;display:flex;flex-direction:column;gap:9%}
+  .three .panel{flex:1;border-radius:4px;background:linear-gradient(158deg,#6b4425,#583619);
+    box-shadow:inset 2px 3px 6px rgba(0,0,0,.5), inset -2px -2px 4px rgba(255,214,170,.12);}
+  .three .hinge{position:absolute;left:-5px;width:8px;height:12%;background:linear-gradient(90deg,#4a3826,#2c2015);
+    border-radius:2px}
+  .three .hinge.h1{top:15%}.three .hinge.h2{bottom:15%}
+  .three .odds{font-size:clamp(26px,4.4vw,40px)}
+
+  /* HUNDRED-door: compact tiles that open + converge */
+  .hundred .frame{aspect-ratio:5/7;border-radius:3px;border:2px solid #2b2016;
+    box-shadow:0 3px 7px rgba(12,8,32,.4), inset 0 0 6px rgba(0,0,0,.6)}
+  .hundred .prize{font-size:clamp(11px,1.5vw,17px)}
+  .hundred .slab{border-radius:2px;transition:opacity .3s ease, transform .3s ease}
+  .hundred .frame.open .slab{opacity:0;transform:scale(.55)}
+  .hundred .frame:not(.locked):hover{transform:translateY(-3px);z-index:2}
+  .hundred .num{top:5%;font-size:clamp(7px,.95vw,10px)}
+  .hundred .knob{right:15%;top:50%;transform:translateY(-50%);width:clamp(3px,.55vw,5px);height:clamp(3px,.55vw,5px)}
+  .hundred .odds{font-size:clamp(9px,1.3vw,14px)}
+  .hundred .frame.keeper{z-index:6;transition:transform .6s cubic-bezier(.2,.7,.2,1), box-shadow .6s}
+  .hundred .frame.keeper.grow{transform:scale(2.5);box-shadow:0 0 0 2px var(--gold),0 6px 26px rgba(255,200,90,.6)}
+  .hundred .frame.keeper.grow .odds{font-size:14px}
+
+  /* pick / win / lose accents (both modes) */
+  .frame.picked{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(31,200,228,.55)}
+  .three .frame.picked{box-shadow:0 0 0 3px rgba(31,200,228,.55),0 20px 44px rgba(12,8,32,.5)}
+  .frame.win{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,212,121,.6),0 0 40px rgba(255,200,90,.5)}
+  .frame.lose{border-color:var(--coral)}
+
+  /* actions / result / scores */
+  .mh .actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;min-height:50px}
+  .mh button.act{font-family:inherit;font-weight:700;font-size:clamp(14px,2vw,17px);padding:13px 26px;
+    border-radius:999px;border:2px solid var(--cyan);background:var(--cyan);color:var(--ink);cursor:pointer;transition:transform .12s}
+  .mh button.act.ghost{background:transparent;color:var(--white)}
+  .mh button.act:hover{transform:translateY(-2px)}
+  .mh button.act:focus-visible{outline:3px solid var(--white);outline-offset:3px}
+  .mh .result{font-size:clamp(17px,2.6vw,24px);font-weight:700;min-height:1.5em;text-align:center}
+  .mh .result .w{color:var(--gold)} .mh .result .l{color:var(--coral)}
+  .mh .scores{display:flex;gap:clamp(14px,3vw,44px);flex-wrap:wrap;justify-content:center;margin-top:2px}
+  .mh .card{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.24);border-radius:14px;
+    padding:12px 26px;min-width:172px;text-align:center}
+  .mh .card .k{font-size:12px;letter-spacing:2px;color:var(--faint);font-weight:700;text-transform:uppercase}
+  .mh .card .pct{font-size:clamp(28px,4.6vw,40px);font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+  .mh .card.sw .pct{color:var(--cyan)} .mh .card.st .pct{color:var(--faint)}
+  .mh .card .n{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .mh .auto{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;color:var(--faint);font-size:13px}
+  .mh .auto button{font-family:inherit;font-weight:700;border:1.5px solid rgba(255,255,255,.38);background:transparent;
+    color:var(--white);font-size:13px;padding:8px 16px;border-radius:999px;cursor:pointer}
+  .mh .foot{color:var(--faint);font-size:12.5px;opacity:.85;text-align:center}
+  @media (prefers-reduced-motion: reduce){ .slab,.frame,.mh button{transition:none} }
 </style>
 </head>
 <body>
-  <h1>Monty Hall — should you <span class="u">switch</span>?</h1>
-  <p class="sub" id="sub">Pick a door.</p>
-  <div class="doors" id="doors"></div>
+<div class="mh">
+  <h1>Monty Hall: should you <span class="u">switch</span>?</h1>
+  <div class="nav">
+    <button type="button" id="tab3" class="on" onclick="MH.setMode(3)">3 doors</button>
+    <button type="button" id="tab100" onclick="MH.setMode(100)">100 doors</button>
+  </div>
+  <p class="status" id="status">Pick a door.</p>
+  <div class="stage three" id="stage"></div>
   <div class="actions" id="actions"></div>
   <div class="result" id="result"></div>
   <div class="scores">
-    <div class="card stay"><div class="k">Always stay</div><div class="pct" id="stayPct">–</div><div class="n" id="stayN">0 wins / 0</div></div>
-    <div class="card switch"><div class="k">Always switch</div><div class="pct" id="switchPct">–</div><div class="n" id="switchN">0 wins / 0</div></div>
+    <div class="card st"><div class="k">Always stay</div><div class="pct" id="stayPct">-</div><div class="n" id="stayN">0 wins / 0</div></div>
+    <div class="card sw"><div class="k">Always switch</div><div class="pct" id="switchPct">-</div><div class="n" id="switchN">0 wins / 0</div></div>
   </div>
   <div class="auto">
-    Fast-forward the maths:
-    <button type="button" onclick="auto(100,false)">Stay ×100</button>
-    <button type="button" onclick="auto(100,true)">Switch ×100</button>
-    <button type="button" onclick="resetAll()">Reset</button>
+    See it over many rounds:
+    <button type="button" onclick="MH.auto(200,false)">Stay ×200</button>
+    <button type="button" onclick="MH.auto(200,true)">Switch ×200</button>
+    <button type="button" onclick="MH.reset()">Reset scores</button>
   </div>
-  <div class="foot">Stay wins ≈ 33% · Switch wins ≈ 67%. Monash DeepNeuron — Plan Like an Engineer.</div>
+  <div class="foot">Monash DeepNeuron &middot; Plan Like an Engineer</div>
+</div>
 
 <script>
-(function(){
-  var doorsEl=document.getElementById('doors'), actEl=document.getElementById('actions'),
-      resEl=document.getElementById('result'), subEl=document.getElementById('sub');
-  var car, picked, opened, phase;
-  var stay={w:0,n:0}, sw={w:0,n:0};
+var MH=(function(){
+  var stage=document.getElementById('stage'), statusEl=document.getElementById('status'),
+      actionsEl=document.getElementById('actions'), resultEl=document.getElementById('result');
+  var N=3, car, pick, keeper, opened, phase, busy=false, els=[];
+  var scores={3:{st:{w:0,n:0},sw:{w:0,n:0}}, 100:{st:{w:0,n:0},sw:{w:0,n:0}}};
+
   function rnd(n){return Math.floor(Math.random()*n);}
-  function newRound(){ car=rnd(3); picked=null; opened=null; phase='pick'; resEl.innerHTML=''; subEl.textContent='Pick a door.'; render(); }
-  function pick(i){
-    if(phase!=='pick') return;
-    picked=i;
-    var choices=[0,1,2].filter(function(d){return d!==picked && d!==car;});
-    opened=choices[rnd(choices.length)]; phase='decide';
-    subEl.innerHTML='I opened door '+(opened+1)+' — a goat. Keep door '+(picked+1)+', or switch?';
+  function otherThan(p){ var k; do{k=rnd(N);}while(k===p); return k; }
+  function pctPick(){ return Math.round(100/N); }        // 33 or 1
+  function pctKeep(){ return 100-pctPick(); }            // 67 or 99
+
+  function setMode(n){
+    N=n;
+    document.getElementById('tab3').classList.toggle('on', n===3);
+    document.getElementById('tab100').classList.toggle('on', n===100);
+    start(); updateScores();
+  }
+  function start(){
+    car=rnd(N); pick=null; keeper=null; opened=[]; phase='pick'; busy=false;
+    resultEl.innerHTML='';
+    setStatus(N===3 ? 'Pick a door.' : 'Pick one of the 100 doors.');
+    build();
     render();
   }
-  function decide(doSwitch){
-    if(phase!=='decide') return;
-    var other=[0,1,2].filter(function(d){return d!==picked && d!==opened;})[0];
-    var finalPick=doSwitch?other:picked; var won=(finalPick===car);
-    (doSwitch?sw:stay).n++; if(won)(doSwitch?sw:stay).w++;
-    picked=finalPick; phase='done';
-    resEl.innerHTML= won? '<span class="w">You win the car! '+(doSwitch?'Switching':'Staying')+' paid off.</span>'
-                        : '<span class="l">A goat. '+(doSwitch?'Switching':'Staying')+' lost this one.</span>';
-    subEl.innerHTML='Switching wins about <b>2 out of 3</b>. Play again.';
-    updateScores(); render(); setTimeout(newRound, 1900);
+  function setStatus(html){ statusEl.innerHTML=html; }
+
+  function build(){
+    stage.className='stage '+(N===3?'three':'hundred');
+    stage.innerHTML=''; els=[];
+    for(var i=0;i<N;i++){
+      var f=document.createElement('div'); f.className='frame'; f.dataset.i=i;
+      f.innerHTML =
+        '<div class="behind"><span class="prize">'+(i===car?'🚗':'🐐')+'</span></div>'+
+        '<div class="slab">'+
+          '<span class="num">'+(i+1)+'</span>'+
+          (N===3?'<div class="stiles"><div class="panel"></div><div class="panel"></div></div>':'')+
+          '<div class="knob"></div>'+
+          (N===3?'<div class="hinge h1"></div><div class="hinge h2"></div>':'')+
+        '</div>'+
+        '<div class="odds"></div>';
+      els[i]=f; stage.appendChild(f);
+    }
   }
-  function slabHTML(i){
-    return '<div class="behind"><span class="prize">'+(i===car?'🚗':'🐐')+'</span></div>'
-         + '<div class="slab">'
-         +   '<span class="num">'+(i+1)+'</span>'
-         +   '<div class="stiles"><div class="panel"></div><div class="panel"></div></div>'
-         +   '<div class="knob"></div><div class="hinge h1"></div><div class="hinge h2"></div>'
-         + '</div>';
-  }
+
   function render(){
-    doorsEl.innerHTML=''; actEl.innerHTML='';
-    for(var i=0;i<3;i++){
-      var f=document.createElement('div'); f.className='frame';
-      var open = (phase==='decide' && i===opened) || phase==='done';
-      if(phase!=='pick') f.classList.add('locked');
-      if(open) f.classList.add('open');
-      if(i===picked) f.classList.add('picked');
-      if(phase==='done'){ if(i===car) f.classList.add('win'); else if(i===picked) f.classList.add('lose'); }
-      if(phase==='pick'){ f.tabIndex=0; f.setAttribute('role','button'); f.setAttribute('aria-label','Door '+(i+1)); }
-      f.innerHTML = (i===picked? '<span class="tag">YOUR PICK</span>':'') + slabHTML(i);
-      if(phase==='pick'){ (function(idx){ f.onclick=function(){pick(idx);}; f.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(idx);}}; })(i); }
-      doorsEl.appendChild(f);
+    for(var i=0;i<N;i++){
+      var f=els[i];
+      f.classList.toggle('locked', phase!=='pick');
+      f.onclick=null; f.onkeydown=null; f.removeAttribute('tabindex'); f.removeAttribute('role');
+      if(phase==='pick'){
+        f.tabIndex=0; f.setAttribute('role','button'); f.setAttribute('aria-label','Door '+(i+1));
+        (function(idx){ f.onclick=function(){onPick(idx);};
+          f.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onPick(idx);} }; })(i);
+      }
     }
-    if(phase==='decide'){
-      var other=[0,1,2].filter(function(d){return d!==picked && d!==opened;})[0];
-      var b1=document.createElement('button'); b1.type='button'; b1.className='ghost'; b1.textContent='Stay with door '+(picked+1); b1.onclick=function(){decide(false);};
-      var b2=document.createElement('button'); b2.type='button'; b2.textContent='Switch to door '+(other+1); b2.onclick=function(){decide(true);};
-      actEl.appendChild(b1); actEl.appendChild(b2);
+    renderActions();
+  }
+
+  function onPick(i){
+    if(phase!=='pick' || busy) return;
+    pick=i;
+    keeper = (car!==pick) ? car : otherThan(pick);
+    opened=[]; for(var k=0;k<N;k++){ if(k!==pick && k!==keeper) opened.push(k); }
+    els[pick].classList.add('picked');
+    phase='ready';
+    setStatus(N===3
+      ? 'You picked <b>door '+(pick+1)+'</b>. Now I will open a door that has a goat behind it.'
+      : 'You picked <b>1 door out of 100</b>. Your odds of being right: just <b>1%</b>. Watch what happens when I open 98 goats.');
+    render();
+  }
+
+  function openGoats(){
+    if(phase!=='ready' || busy) return;
+    busy=true; phase='opening'; renderActions();
+    opened.forEach(function(k){ els[k].classList.add('open'); });
+    if(N===3){
+      setStatus('Door <b>'+(opened[0]+1)+'</b> has a goat. Two doors are left.');
+      setTimeout(toDecide, 850);
+    } else {
+      setStatus('All 98 of those are goats. Their chances do not vanish. They pour into the one door I left closed.');
+      setTimeout(converge, 700);
     }
   }
-  function pctTxt(o){ return o.n? Math.round(100*o.w/o.n)+'%' : '–'; }
+
+  function converge(){
+    var kEl=els[keeper], kr=kEl.getBoundingClientRect();
+    var kcx=kr.left+kr.width/2, kcy=kr.top+kr.height/2;
+    opened.forEach(function(k,i){
+      var el=els[k], r=el.getBoundingClientRect();
+      var dx=(kcx-(r.left+r.width/2)).toFixed(1), dy=(kcy-(r.top+r.height/2)).toFixed(1);
+      el.style.transition='transform .95s cubic-bezier(.45,0,.22,1) '+(i*0.004).toFixed(3)+'s, opacity .95s '+(i*0.004).toFixed(3)+'s';
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){
+        el.style.transform='translate('+dx+'px,'+dy+'px) scale(.1)'; el.style.opacity='0';
+      });});
+    });
+    // pick keeps 1%, keeper grows and counts up to 99%
+    showOdds(els[pick], pctPick()+'%', false);
+    kEl.classList.add('keeper','grow','showodds','keepodds');
+    var oddEl=kEl.querySelector('.odds');
+    countUp(oddEl, 1, 99, 1050);
+    setTimeout(toDecide, 1350);
+  }
+
+  function toDecide(){
+    phase='decide'; busy=false;
+    if(N===3){ showOdds(els[pick], pctPick()+'%', false); showOdds(els[keeper], pctKeep()+'%', true); }
+    setStatus(N===3
+      ? 'Keep <b>door '+(pick+1)+'</b> (its '+pctPick()+'%), or switch to <b>door '+(keeper+1)+'</b> (its '+pctKeep()+'%)?'
+      : '98 goats gone. Your door still holds <b>1%</b>. The one door I left holds <b>99%</b>. Stay, or switch?');
+    render();
+  }
+
+  function decide(doSwitch){
+    if(phase!=='decide' || busy) return;
+    var finalPick = doSwitch ? keeper : pick;
+    var won = (finalPick===car);
+    var slot = doSwitch ? scores[N].sw : scores[N].st; slot.n++; if(won) slot.w++;
+    phase='done';
+    for(var i=0;i<N;i++){ els[i].classList.remove('showodds'); els[i].classList.add('open'); }
+    // in 100-mode, bring the two finalists back into view
+    if(N===100){ [pick,keeper].forEach(function(k){ els[k].style.transition='transform .4s'; els[k].style.transform='scale(1)'; els[k].style.opacity='1'; }); }
+    els[finalPick].classList.add(won?'win':'lose');
+    resultEl.innerHTML = won
+      ? '<span class="w">The car! '+(doSwitch?'Switching':'Staying')+' won.</span>'
+      : '<span class="l">A goat. '+(doSwitch?'Switching':'Staying')+' lost this one.</span>';
+    setStatus(N===3
+      ? 'Switching wins about <b>2 times in 3</b>. Play again, or watch it over many rounds below.'
+      : 'Switching wins about <b>99 times in 100</b>. That is the whole idea, made obvious.');
+    updateScores(); renderActions();
+  }
+
+  function showOdds(el, txt, isKeep){
+    var o=el.querySelector('.odds'); o.textContent=txt;
+    el.classList.add('showodds'); if(isKeep) el.classList.add('keepodds');
+  }
+  function countUp(el, from, to, dur){
+    var t0=null;
+    function step(ts){ if(t0===null)t0=ts; var p=Math.min(1,(ts-t0)/dur);
+      el.textContent=Math.round(from+(to-from)*p)+'%'; if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+
+  function renderActions(){
+    actionsEl.innerHTML='';
+    if(phase==='ready') addBtn(N===3?'Open a goat door':'Open 98 goat doors', openGoats, false);
+    else if(phase==='decide'){
+      addBtn('Stay with '+(N===3?'door '+(pick+1):'your door')+' ('+pctPick()+'%)', function(){decide(false);}, true);
+      addBtn('Switch to door '+(keeper+1)+' ('+pctKeep()+'%)', function(){decide(true);}, false);
+    } else if(phase==='done') addBtn('Play again', start, false);
+  }
+  function addBtn(label, fn, ghost){
+    var b=document.createElement('button'); b.type='button'; b.className='act'+(ghost?' ghost':'');
+    b.textContent=label; b.onclick=fn; actionsEl.appendChild(b);
+  }
+
+  function pctTxt(o){ return o.n ? Math.round(100*o.w/o.n)+'%' : '-'; }
   function updateScores(){
-    document.getElementById('stayPct').textContent=pctTxt(stay);
-    document.getElementById('switchPct').textContent=pctTxt(sw);
-    document.getElementById('stayN').textContent=stay.w+' wins / '+stay.n;
-    document.getElementById('switchN').textContent=sw.w+' wins / '+sw.n;
+    var s=scores[N];
+    document.getElementById('stayPct').textContent=pctTxt(s.st);
+    document.getElementById('switchPct').textContent=pctTxt(s.sw);
+    document.getElementById('stayN').textContent=s.st.w+' wins / '+s.st.n;
+    document.getElementById('switchN').textContent=s.sw.w+' wins / '+s.sw.n;
   }
-  window.auto=function(times,doSwitch){
+  function auto(times, doSwitch){
+    var s=scores[N], slot=doSwitch?s.sw:s.st;
     for(var t=0;t<times;t++){
-      var c=rnd(3), p=rnd(3);
-      var opts=[0,1,2].filter(function(d){return d!==p && d!==c;});
-      var o=opts[rnd(opts.length)];
-      var other=[0,1,2].filter(function(d){return d!==p && d!==o;})[0];
-      var fin=doSwitch?other:p; if(fin===c)(doSwitch?sw:stay).w++;
-      (doSwitch?sw:stay).n++;
+      var c=rnd(N), p=rnd(N), keep=(c!==p)?c:otherThan(p);
+      var fin=doSwitch?keep:p; if(fin===c) slot.w++; slot.n++;
     }
     updateScores();
-    subEl.innerHTML='After '+ (doSwitch?sw.n:stay.n) +' auto-rounds: '+ (doSwitch?'switching':'staying') +' wins '+ pctTxt(doSwitch?sw:stay) +'.';
-  };
-  window.resetAll=function(){ stay={w:0,n:0}; sw={w:0,n:0}; updateScores(); newRound(); };
-  newRound(); updateScores();
+    setStatus('Over '+slot.n+' rounds, '+(doSwitch?'switching':'staying')+' won '+pctTxt(slot)+' of the time.');
+  }
+  function reset(){ scores={3:{st:{w:0,n:0},sw:{w:0,n:0}},100:{st:{w:0,n:0},sw:{w:0,n:0}}}; updateScores(); start(); }
+
+  setMode(3);
+  return { setMode:setMode, openGoats:openGoats, decide:decide, auto:auto, reset:reset };
 })();
 </script>
 </body>
