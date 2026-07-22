@@ -88,6 +88,8 @@
   .three .frame.picked, .two .frame.picked{box-shadow:0 0 0 3px rgba(31,200,228,.6),0 22px 46px rgba(12,8,32,.5)}
   .frame.win{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,212,121,.65),0 0 46px rgba(255,200,90,.55)!important}
   .frame.lose{border-color:var(--coral)}
+  /* 100-door pause: highlight the one door I left closed next to the picked one */
+  .hundred .frame.leftclosed{border-color:var(--white);box-shadow:0 0 0 2px var(--white),0 0 16px rgba(255,255,255,.6);z-index:3}
 
   /* TWO-door showcase slots (labels above the two finalists) */
   .mh .slot{display:flex;flex-direction:column;align-items:center;gap:14px;animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
@@ -225,14 +227,31 @@ var MH=(function(){
   function openGoats(){
     if(phase!=='ready' || busy) return;
     busy=true; phase='opening'; renderActions();
-    opened.forEach(function(k){ els[k].classList.add('open'); });
     if(N===3){
+      opened.forEach(function(k){ els[k].classList.add('open'); });
       setStatus('Door <b>'+(opened[0]+1)+'</b> has a goat. Two doors are left.');
       setTimeout(toDecide3, 900);
     } else {
-      setStatus('All 98 of those are goats. Their chances do not vanish. They pour into the one door I left closed.');
-      setTimeout(converge, 750);
+      // 100-door: cascade the 98 open slowly, then STOP on the two finalists so I can explain
+      opened.forEach(function(k,i){
+        var slab=els[k].querySelector('.slab');
+        if(slab) slab.style.transitionDelay=(i*0.014).toFixed(3)+'s';
+        els[k].classList.add('open');
+      });
+      els[keeper].classList.add('leftclosed');
+      phase='opened98'; busy=false;
+      setStatus('98 goats, all open. Two doors are left: <b>your door '+(pick+1)+'</b>, and <b>door '+(keeper+1)+'</b>, the one I chose to leave closed. When you are ready, watch where all those odds go.');
+      renderActions();
     }
+  }
+
+  /* 100-door: on the second click, pour the 98 into the door I left closed */
+  function collapse98(){
+    if(phase!=='opened98' || busy) return;
+    busy=true; phase='converging'; renderActions();
+    opened.forEach(function(k){ var slab=els[k].querySelector('.slab'); if(slab) slab.style.transitionDelay=''; });
+    setStatus('Their chances do not vanish. They pour into the one door I left closed.');
+    converge();
   }
 
   /* 3-door DEMO: no probabilities shown, so the room actually guesses */
@@ -301,6 +320,7 @@ var MH=(function(){
   function renderActions(){
     actionsEl.innerHTML='';
     if(phase==='ready') addBtn(N===3?'Open a goat door':'Open the other 98 doors', openGoats, false);
+    else if(phase==='opened98') addBtn('Pour the 98 into one door', collapse98, false);
     else if(phase==='decide'){
       addBtn('Stay with '+(N===3?'door '+(pick+1):'your door'), function(){decide(false);}, true);
       addBtn('Switch to door '+(keeper+1), function(){decide(true);}, false);
