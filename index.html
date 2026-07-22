@@ -156,7 +156,7 @@
 var MH=(function(){
   var stage=document.getElementById('stage'), statusEl=document.getElementById('status'),
       actionsEl=document.getElementById('actions'), resultEl=document.getElementById('result');
-  var N=3, car, pick, keeper, opened, phase, busy=false, els=[], finalEls=[];
+  var N=3, car, pick, keeper, opened, phase, busy=false, els=[], finalEls=[], demoRound=false;
   var scores={3:{st:{w:0,n:0},sw:{w:0,n:0}}, 100:{st:{w:0,n:0},sw:{w:0,n:0}}};
   var firstRound={3:true, 100:true};   // first demo per mode: staying always loses
 
@@ -215,6 +215,7 @@ var MH=(function(){
   function onPick(i){
     if(phase!=='pick' || busy) return;
     pick=i;
+    demoRound = firstRound[N];
     if(firstRound[N]){ car=otherThan(pick); firstRound[N]=false; repaintPrizes(); } // demo: stay loses
     keeper = (car!==pick) ? car : otherThan(pick);
     opened=[]; for(var k=0;k<N;k++){ if(k!==pick && k!==keeper) opened.push(k); }
@@ -284,16 +285,22 @@ var MH=(function(){
   function showcase(){
     stage.style.opacity=''; stage.style.transition='';
     stage.className='stage two'; stage.innerHTML=''; finalEls=[];
+    var showPct = !demoRound;   // first go: hide the odds so the room actually guesses
     var items=[['YOUR DOOR', pick, '1%', 0], ['THE DOOR I LEFT', keeper, '99%', 1]];
     items.forEach(function(it){
-      var slot=document.createElement('div'); slot.className='slot'+(it[3]===1?' s1 keepcap':'');
-      slot.innerHTML='<div class="cap"><div class="caplabel">'+it[0]+'</div><div class="cappct">'+it[2]+'</div></div>';
+      var isKeep = it[3]===1;
+      var slot=document.createElement('div');
+      slot.className='slot'+(isKeep?' s1':'')+((isKeep && showPct)?' keepcap':'');
+      var pct = showPct ? it[2] : '?';
+      slot.innerHTML='<div class="cap"><div class="caplabel">'+it[0]+'</div><div class="cappct">'+pct+'</div></div>';
       var f=document.createElement('div'); f.className='frame'+(it[3]===0?' picked':''); f.dataset.i=it[1];
       f.innerHTML=frameHTML(it[1], true);
       slot.appendChild(f); stage.appendChild(slot); finalEls[it[3]]=f;
     });
     phase='decide'; busy=false;
-    setStatus('Your door had a <b>1 in 100</b> chance. The door I left holds the other <span class="g">99</span>. Stay, or switch?');
+    setStatus(showPct
+      ? 'Your door had a <b>1 in 100</b> chance. The door I left holds the other <span class="g">99</span>. Stay, or switch?'
+      : 'Two doors are left: <b>your door</b>, or <b>the one I left closed</b>. Stay, or switch? Take a guess.');
     renderActions();
   }
 
